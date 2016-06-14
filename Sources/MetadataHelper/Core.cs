@@ -471,6 +471,8 @@ namespace Microsoft.Cci {
       Contract.Requires(referencedAssembly != null);
 
       string path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".dll");
+      // .NET Core has mscorlib.ni.dll. ~ t-mattmc@microsoft.com 2016-06-13
+      if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".ni.dll");
       if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".winmd");
       if (!File.Exists(path)) path = Path.Combine(probeDir, referencedAssembly.Name.Value + ".exe");
       if (!File.Exists(path)) return null;
