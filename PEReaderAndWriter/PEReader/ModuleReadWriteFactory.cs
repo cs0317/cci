@@ -362,9 +362,15 @@ namespace Microsoft.Cci {
         uint internedModuleId = (uint)this.metadataReaderHost.InternFactory.GetAssemblyInternedKey(unifiedAssemblyIdentity);
         Module/*?*/ module = this.InternedIdToModuleMap.Find(internedModuleId);
         if (module == null && referringModule != null) {
-          this.metadataReaderHost.ResolvingAssemblyReference(referringModule, unifiedAssemblyIdentity);
+          AssemblyIdentity foundAssemblyIdentity = this.metadataReaderHost.ResolvingAssemblyReference(referringModule, unifiedAssemblyIdentity);
           // See if the host loaded the assembly using this PeReader (loading indirectly causes the map to be updated)
-          module = this.InternedIdToModuleMap.Find(internedModuleId);
+          // If we matched an assembly with a different identity (e.g.,
+          // version), look up the assembly we actually matched. ~ t-mattmc@microsoft.com 2016-06-15
+          if (foundAssemblyIdentity != null)
+          {
+            internedModuleId = (uint)this.metadataReaderHost.InternFactory.GetAssemblyInternedKey(foundAssemblyIdentity);
+            module = this.InternedIdToModuleMap.Find(internedModuleId);
+          }
           if (module == null) {
             // One last chance, it might have been already loaded by a different instance of PeReader
             var a = this.metadataReaderHost.FindAssembly(unifiedAssemblyIdentity);
