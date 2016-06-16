@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 
 namespace Microsoft.Cci.MutableCodeModel {
 
@@ -1038,7 +1039,9 @@ namespace Microsoft.Cci.MutableCodeModel {
           if (template is Dummy || !template.IsGeneric)
             this.resolvedGenericTypeInstance = Dummy.GenericTypeInstance;
           else
-            this.resolvedGenericTypeInstance = Immutable.GenericTypeInstance.GetGenericTypeInstance(template, self.GenericArguments, this.InternFactory);
+            // We have to resolve the type arguments.  Seen with
+            // System.Threading.Tasks.Task`1.GetAwaiter. ~ t-mattmc@microsoft.com 2016-06-15
+            this.resolvedGenericTypeInstance = Immutable.GenericTypeInstance.GetGenericTypeInstance(template, self.GenericArguments.Select((arg) => arg.ResolvedType), this.InternFactory);
         }
         return this.resolvedGenericTypeInstance;
       }
