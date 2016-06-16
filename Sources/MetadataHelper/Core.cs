@@ -478,7 +478,20 @@ namespace Microsoft.Cci {
       if (!File.Exists(path)) return null;
       var assembly = this.LoadUnitFrom(path) as IAssembly;
       if (assembly == null) return null;
-      if (!assembly.AssemblyIdentity.Equals(referencedAssembly)) return null;
+      /* The actual .NET Core assembly loader has a matching criterion more
+       * complicated than Equals: it allows a reference to match an assembly of
+       * a higher minor version (seen with
+       * Microsoft.AspNetCore.Server.Kestrel.Https ->
+       * System.Security.Cryptography.X509Certificates).  For the moment, match
+       * on name only.  If and when we support verification across parties that
+       * have different assemblies with the same identity, we'll have to set up
+       * that scoping properly, but even then, comparison by name within a
+       * party's scope should be sufficient for us.
+       * ~ t-mattmc@microsoft.com 2016-06-15
+       */
+      if (/*!assembly.AssemblyIdentity.Equals(referencedAssembly)*/
+      assembly.AssemblyIdentity.Name.UniqueKeyIgnoringCase != referencedAssembly.Name.UniqueKeyIgnoringCase)
+        return null;
       return assembly.AssemblyIdentity;
     }
 
@@ -743,7 +756,7 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="referringUnit">The unit that is referencing the assembly.</param>
     /// <param name="referencedAssembly">Assembly identifier for the assembly being referenced.</param>
-    void ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly);
+    AssemblyIdentity ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly);
 
     /// <summary>
     /// This method is called when the module reference is being resolved and its not already loaded by the host.
@@ -883,7 +896,7 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="referringUnit">The unit that is referencing the assembly.</param>
     /// <param name="referencedAssembly">Assembly identifier for the assembly being referenced.</param>
-    public void ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
+    public AssemblyIdentity ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
       Contract.Requires(referringUnit != null);
       Contract.Requires(referencedAssembly != null);
       throw new NotImplementedException();
@@ -1213,13 +1226,17 @@ namespace Microsoft.Cci {
     /// </summary>
     /// <param name="referringUnit">The unit that is referencing the assembly.</param>
     /// <param name="referencedAssembly">Assembly identity for the assembly being referenced.</param>
-    public virtual void ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
+    public virtual AssemblyIdentity ResolvingAssemblyReference(IUnit referringUnit, AssemblyIdentity referencedAssembly) {
       if (!string.IsNullOrEmpty(referencedAssembly.Location)) {
         this.LoadUnit(referencedAssembly);
+        return referencedAssembly;
       } else {
         AssemblyIdentity ai = this.ProbeAssemblyReference(referringUnit, referencedAssembly);
         if (ai != null && !String.IsNullOrEmpty(ai.Location)) {
           this.LoadUnit(ai);
+          return ai;
+        } else {
+          return null;
         }
       }
     }
