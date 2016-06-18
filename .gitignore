@@ -1,3 +1,7 @@
+Samples/ILGarbageCollect/bin/
+Samples/ILGarbageCollect/obj/
+Sources/ControlAndDataFlowGraph/bin/
+Sources/ControlAndDataFlowGraph/obj/
 Sources/ILGenerator/bin/
 Sources/ILGenerator/obj/
 Sources/MetadataHelper/bin/
@@ -6,7 +10,13 @@ Sources/MetadataModel/bin/
 Sources/MetadataModel/obj/
 Sources/MutableMetadataModel/bin/
 Sources/MutableMetadataModel/obj/
+Sources/PdbReader/bin/
+Sources/PdbReader/obj/
+Sources/PdbWriter/bin/
+Sources/PdbWriter/obj/
 Sources/PeReader/bin/
 Sources/PeReader/obj/
+Sources/PeWriter/bin/
+Sources/PeWriter/obj/
 Sources/SourceModel/bin/
 Sources/SourceModel/obj/
