@@ -7,6 +7,7 @@ using System.IO;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System;
+using System.Linq;
 
 namespace Microsoft.Cci.ILToCodeModel {
 
@@ -299,16 +300,38 @@ namespace Microsoft.Cci.ILToCodeModel {
     }
 
 
+    public static bool HasAttribute(IDefinition element, string attributeTypeFullName) {
+      return element.Attributes.Where(
+        (attr) => new TypeNameFormatter().GetTypeName(attr.Type, NameFormattingOptions.None) == attributeTypeFullName)
+        .Count() > 0;
+    }
+
     /// <summary>
     /// Replaces the body of the given method with an equivalent instance of SourceMethod body, which in addition also implements ISourceMethodBody,
     /// which has the additional property, Block, which represents the corresponding Code Model for the method body.
     /// </summary>
     public override void TraverseChildren(IMethodDefinition method) {
+      // Hack ~ t-mattmc@microsoft.com 2016-07-20
+      if (HasAttribute(method, "BCTOmitAttribute")) return;
       var methodDef = (MethodDefinition)method;
       if (methodDef.IsExternal || methodDef.IsAbstract) return;
+      if (HasAttribute(method, "BCTOmitImplementationAttribute")) return;
       methodDef.Body = new SourceMethodBody(method.Body, this.host, this.sourceLocationProvider, this.localScopeProvider, this.options);
     }
 
+    public override void TraverseChildren(ITypeDefinition typeDefinition) {
+      if (HasAttribute(typeDefinition, "BCTOmitAttribute") ||
+        // Hack!  There's no easy way to look up the original type and see if
+        // it's BCT omitted.  So try skipping all compiler-generated types for
+        // now. ~ t-mattmc@microsoft.com 2016-07-20
+        HasAttribute(typeDefinition, "System.Runtime.CompilerServices.CompilerGeneratedAttribute")) return;
+      base.TraverseChildren(typeDefinition);
+    }
+
+    public override void TraverseChildren(IFieldDefinition fieldDefinition) {
+      if (HasAttribute(fieldDefinition, "BCTOmitAttribute")) return;
+      base.TraverseChildren(fieldDefinition);
+    }
   }
 
   /// <summary>
@@ -408,6 +431,9 @@ namespace Microsoft.Cci.ILToCodeModel {
     /// </summary>
     /// <param name="methodBody"></param>
     public override void TraverseChildren(IMethodBody methodBody) {
+      if (!(methodBody is SourceMethodBody))
+        // BCT omitted?
+        return;
       var mutableBody = (SourceMethodBody)methodBody;
       var block = mutableBody.Block; //force decompilation
       bool denormalize = false;
